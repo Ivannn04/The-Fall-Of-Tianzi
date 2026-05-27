@@ -11,11 +11,14 @@ public class playermovement1 : MonoBehaviour
     private bool isGrounded;
     private bool isFacingRight = true; 
 
-    // --- LOGIKA SIKLUS SERANGAN ---
+    // --- LOGIKA SIKLUS SERANGAN MELEE (KLIK KIRI) ---
     private int nextAttackType = 1; 
+    private bool attackBuffered = false; 
 
-    // --- TAMBAHAN VARIABEL BUFFER INPUT AGAR RESPONSIF ---
-    private bool attackBuffered = false; // Menyimpan status apakah ada antrean pencetan serang
+    // --- LOGIKA RANGED ATTACK (KLIK KANAN) ---
+    [Header("Ranged Attack Settings")]
+    public GameObject kiWavePrefab; // Tempat menaruh prefab proyektil di Inspector
+    public Transform firePoint;     // Titik munculnya proyektil
 
     // --- VARIABEL TIMER IDLE 5 DETIK ---
     private float idleTimer = 0f;
@@ -44,7 +47,11 @@ public class playermovement1 : MonoBehaviour
 
         // Ambil info status animasi saat ini
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
-        bool isAttacking = stateInfo.IsName("Player_atk") || stateInfo.IsName("Player_atk2");
+        
+        // Pengecekan status: apakah sedang memutar animasi attack klik kiri ATAU animasi tebasan ki klik kanan
+        bool isAttacking = stateInfo.IsName("Player_atk") || 
+                           stateInfo.IsName("Player_atk2") || 
+                           stateInfo.IsName("Ranged_atk"); 
 
         if (!isAttacking)
         {
@@ -54,6 +61,9 @@ public class playermovement1 : MonoBehaviour
         {
             anim.SetFloat("Speed", 0);
         }
+
+        // Kirim status tanah ke Animator
+        anim.SetBool("IsGrounded", isGrounded);
 
         // --- LOGIKA HITUNG MUNDUR TIMER IDLE ---
         if (move == 0 && isGrounded && !isAttacking)
@@ -79,26 +89,30 @@ public class playermovement1 : MonoBehaviour
             Flip();
         }
 
-        // --- SOLUSI UTAMA: LOGIKA INPUT SERANG DENGAN BUFFER ---
+        // --- DETEKSI MELEE ATTACK (KLIK KIRI) ---
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
             if (!isAttacking)
             {
-                // Jika sedang tidak menyerang, langsung eksekusi serangan
                 ExecuteAttack();
             }
             else
             {
-                // Jika sedang sibuk menyerang, masukkan klik ini ke dalam antrean (buffer)
                 attackBuffered = true;
             }
         }
 
-        // Jika animasi serang sudah selesai (isAttacking jadi false) DAN ada antrean input
         if (!isAttacking && attackBuffered)
         {
             ExecuteAttack();
-            attackBuffered = false; // Kosongkan kembali antrean setelah digunakan
+            attackBuffered = false; 
+        }
+
+        // --- DETEKSI RANGED ATTACK (KLIK KANAN) ---
+        // Hanya mendeteksi klik kanan, dan pastikan tidak sedang sibuk menyerang yang lain
+        if (Mouse.current.rightButton.wasPressedThisFrame && !isAttacking)
+        {
+            ShootKiWave();
         }
 
         if (Keyboard.current.spaceKey.wasPressedThisFrame && isGrounded)
@@ -107,7 +121,6 @@ public class playermovement1 : MonoBehaviour
         }
     }
 
-    // Fungsi khusus untuk mengeksekusi serangan agar kode tidak ditulis berulang
     private void ExecuteAttack()
     {
         anim.SetInteger("ComboCount", nextAttackType);
@@ -122,10 +135,26 @@ public class playermovement1 : MonoBehaviour
         }
     }
 
+    private void ShootKiWave()
+    {
+        // 1. Picu animasi tebasan jarak jauh menggunakan TRIGGER baru (bukan ComboCount)
+        anim.SetTrigger("RangedAttack");
+
+        // 2. Tentukan posisi kemunculan proyektil
+        Vector3 spawnPosition = firePoint != null ? firePoint.position : transform.position;
+
+        // 3. Spawn objek proyektil KiWave
+        GameObject waveObj = Instantiate(kiWavePrefab, spawnPosition, Quaternion.identity);
+        KiWave waveScript = waveObj.GetComponent<KiWave>();
+
+        // 4. Berikan arah tembakan berdasarkan arah hadap karakter
+        Vector2 shootDirection = isFacingRight ? Vector2.right : Vector2.left;
+        waveScript.Launch(shootDirection);
+    }
+
     public void ResetComboParameter()
     {
         anim.SetInteger("ComboCount", 0);
-        // Tambahan aman: pastikan antrean di-clear saat reset parameter dijalankan lewat Animation Event
         attackBuffered = false; 
     }
 

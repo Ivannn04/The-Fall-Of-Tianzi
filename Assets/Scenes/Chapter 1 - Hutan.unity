@@ -7286,8 +7286,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   speed: 5
-  jumpForce: 8
-  comboResetTime: 0.6
+  jumpForce: 7
+  kiWavePrefab: {fileID: 1630539566220279082, guid: f8ed23bdd60bbca4398513fee9d3d3ef, type: 3}
+  firePoint: {fileID: 0}
+  idleDelay: 5
 --- !u!70 &1961236150
 CapsuleCollider2D:
   m_ObjectHideFlags: 0
