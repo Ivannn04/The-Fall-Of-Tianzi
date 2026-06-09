@@ -38,7 +38,19 @@ public class KiWave : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D collision)
     {
-        if (collision.CompareTag("Enemy"))
+        // 1. Cek apakah yang ditabrak memiliki komponen EnemyController
+        EnemyController enemy = collision.GetComponent<EnemyController>();
+        
+        if (enemy != null)
+        {
+            // 2. Berikan damage sebesar 3 (Instant kill untuk kroco ber-HP 3)
+            enemy.TakeDamageFromPlayer(3);
+
+            // 3. Hancurkan proyektil setelah mengenai musuh
+            Destroy(gameObject);
+        }
+        // Tambahan opsional: Hancurkan peluru jika menabrak dinding/tanah agar tidak tembus map
+        else if (collision.CompareTag("Ground"))
         {
             Destroy(gameObject);
         }

@@ -15,10 +15,15 @@ public class playermovement1 : MonoBehaviour
     private int nextAttackType = 1; 
     private bool attackBuffered = false; 
 
+    [Header("Melee Attack Settings")]
+    public Transform attackPoint;       
+    public float attackRange = 0.5f;    
+    public LayerMask enemyLayers;       
+
     // --- LOGIKA RANGED ATTACK (KLIK KANAN) ---
     [Header("Ranged Attack Settings")]
-    public GameObject kiWavePrefab; // Tempat menaruh prefab proyektil di Inspector
-    public Transform firePoint;     // Titik munculnya proyektil
+    public GameObject kiWavePrefab; 
+    public Transform firePoint;     
 
     // --- VARIABEL TIMER IDLE 5 DETIK ---
     private float idleTimer = 0f;
@@ -45,10 +50,8 @@ public class playermovement1 : MonoBehaviour
 
         rb.linearVelocity = new Vector2(move * speed, rb.linearVelocity.y);
 
-        // Ambil info status animasi saat ini
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
         
-        // Pengecekan status: apakah sedang memutar animasi attack klik kiri ATAU animasi tebasan ki klik kanan
         bool isAttacking = stateInfo.IsName("Player_atk") || 
                            stateInfo.IsName("Player_atk2") || 
                            stateInfo.IsName("Ranged_atk"); 
@@ -62,10 +65,8 @@ public class playermovement1 : MonoBehaviour
             anim.SetFloat("Speed", 0);
         }
 
-        // Kirim status tanah ke Animator
         anim.SetBool("IsGrounded", isGrounded);
 
-        // --- LOGIKA HITUNG MUNDUR TIMER IDLE ---
         if (move == 0 && isGrounded && !isAttacking)
         {
             idleTimer += Time.deltaTime;
@@ -108,22 +109,54 @@ public class playermovement1 : MonoBehaviour
             attackBuffered = false; 
         }
 
-        // --- DETEKSI RANGED ATTACK (KLIK KANAN) ---
-        // Hanya mendeteksi klik kanan, dan pastikan tidak sedang sibuk menyerang yang lain
+        // --- DETEKSI RANGED ATTACK (KLIK KANAN dengan Pengecekan Ki) ---
         if (Mouse.current.rightButton.wasPressedThisFrame && !isAttacking)
         {
-            ShootKiWave();
+            // Cek dulu ke KiManager apakah isi tong masih ada minimal 1 buah
+            if (KiManager.Instance != null && KiManager.Instance.TryUseKi())
+            {
+                ShootKiWave();
+            }
+            else
+            {
+                Debug.Log("Ki kamu habis! Tebas musuh dulu untuk mengisi tong!");
+            }
         }
 
         if (Keyboard.current.spaceKey.wasPressedThisFrame && isGrounded)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+            if (anim != null) anim.SetTrigger("Jump");
         }
     }
 
     private void ExecuteAttack()
     {
         anim.SetInteger("ComboCount", nextAttackType);
+
+        if (attackPoint != null)
+        {
+            Collider2D[] hitEnemies = Physics2D.OverlapCircleAll(attackPoint.position, attackRange, enemyLayers);
+
+            // Boolean untuk menandai apakah tebasan kita sukses memukul musuh
+            bool hitSuccess = false;
+
+            foreach (Collider2D enemy in hitEnemies)
+            {
+                EnemyController enemyScript = enemy.GetComponent<EnemyController>();
+                if (enemyScript != null)
+                {
+                    enemyScript.TakeDamageFromPlayer(1); 
+                    hitSuccess = true; // Set true karena ada musuh yang terkena damage
+                }
+            }
+
+            // KUNCI UTAMA MELEE FILL: Jika tebasan berhasil mengenai musuh, isi tong bertambah setengah (0.5)
+            if (hitSuccess && KiManager.Instance != null)
+            {
+                KiManager.Instance.AddKiFromMelee();
+            }
+        }
 
         if (nextAttackType == 1)
         {
@@ -137,19 +170,18 @@ public class playermovement1 : MonoBehaviour
 
     private void ShootKiWave()
     {
-        // 1. Picu animasi tebasan jarak jauh menggunakan TRIGGER baru (bukan ComboCount)
         anim.SetTrigger("RangedAttack");
 
-        // 2. Tentukan posisi kemunculan proyektil
         Vector3 spawnPosition = firePoint != null ? firePoint.position : transform.position;
 
-        // 3. Spawn objek proyektil KiWave
         GameObject waveObj = Instantiate(kiWavePrefab, spawnPosition, Quaternion.identity);
         KiWave waveScript = waveObj.GetComponent<KiWave>();
 
-        // 4. Berikan arah tembakan berdasarkan arah hadap karakter
-        Vector2 shootDirection = isFacingRight ? Vector2.right : Vector2.left;
-        waveScript.Launch(shootDirection);
+        if (waveScript != null)
+        {
+            Vector2 shootDirection = isFacingRight ? Vector2.right : Vector2.left;
+            waveScript.Launch(shootDirection);
+        }
     }
 
     public void ResetComboParameter()
@@ -179,6 +211,15 @@ public class playermovement1 : MonoBehaviour
         if (collision.gameObject.CompareTag("Ground"))
         {
             isGrounded = false;
+        }
+    }
+
+    private void OnDrawGizmosSelected()
+    {
+        if (attackPoint != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(attackPoint.position, attackRange);
         }
     }
 }

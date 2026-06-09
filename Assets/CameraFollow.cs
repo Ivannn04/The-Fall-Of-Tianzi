@@ -31,6 +31,20 @@ public class CameraFollow : MonoBehaviour
             maxX = bounds.max.x - camHalfWidth;
             minY = bounds.min.y + camHalfHeight;
             maxY = bounds.max.y - camHalfHeight;
+
+            // --- KUNCI UTAMA: TELEPORT INSTAN DI FRAME PERTAMA ---
+            if (target != null)
+            {
+                // Hitung posisi ideal kamera berdasarkan posisi awal target + offset
+                Vector3 initialDesiredPosition = target.position + offset;
+
+                // Batasi langsung posisinya agar tidak melanggar border Tilemap
+                float clampedX = Mathf.Clamp(initialDesiredPosition.x, minX, maxX);
+                float clampedY = Mathf.Clamp(initialDesiredPosition.y, minY, maxY);
+
+                // Paksa posisi kamera langsung ke koordinat aman secara instan
+                transform.position = new Vector3(clampedX, clampedY, initialDesiredPosition.z);
+            }
         }
     }
 
