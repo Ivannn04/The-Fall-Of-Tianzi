@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI; // <--- WAJIB TAMBAHKAN BARIS INI!
 
 public class playermovement1 : MonoBehaviour
 {
@@ -13,6 +14,19 @@ public class playermovement1 : MonoBehaviour
 
     private int nextAttackType = 1; 
     private bool attackBuffered = false; 
+
+    [Header("BARU: Referensi UI Tombol Kanan Bawah")]
+    public Image atkButtonImage;     
+    public Image jumpButtonImage;    
+    public Image specialButtonImage; 
+
+    [Header("BARU: Pengaturan Warna Efek Tekan")]
+    public Color pressedColor = new Color(0.5f, 0.5f, 0.5f, 1f); 
+    
+    // PERBAIKAN: Buat penampung alpha asli untuk masing-masing tombol
+    private float atkAlphaOriginal = 1f;
+    private float jumpAlphaOriginal = 1f;
+    private float specialAlphaOriginal = 1f;
 
     [Header("Melee Attack Settings")]
     public Transform attackPoint;        
@@ -35,7 +49,12 @@ public class playermovement1 : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
         anim = GetComponent<Animator>(); 
         healthScript = GetComponent<SegmentedHealth>();
-        audioManager = GetComponent<PlayerAudioManager>(); // BARU: Inisialisasi audio manager
+        audioManager = GetComponent<PlayerAudioManager>(); 
+
+        // PERBAIKAN: Mengambil nilai transparan asli yang sudah kamu set di Inspector
+        if (atkButtonImage != null) atkAlphaOriginal = atkButtonImage.color.a;
+        if (jumpButtonImage != null) jumpAlphaOriginal = jumpButtonImage.color.a;
+        if (specialButtonImage != null) specialAlphaOriginal = specialButtonImage.color.a;
     }
 
     void Update()
@@ -45,6 +64,8 @@ public class playermovement1 : MonoBehaviour
         {
             return; 
         }
+
+        ResetButtonColors();
 
         // 2. Logika Pergerakan
         float move = 0;
@@ -72,6 +93,7 @@ public class playermovement1 : MonoBehaviour
         if ((move > 0 && !isFacingRight) || (move < 0 && isFacingRight)) Flip();
 
         // 4. Input Serangan
+        if (Mouse.current.leftButton.isPressed && atkButtonImage != null) atkButtonImage.color = pressedColor;
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
             if (!isAttacking) ExecuteAttack();
@@ -80,6 +102,7 @@ public class playermovement1 : MonoBehaviour
 
         if (!isAttacking && attackBuffered) { ExecuteAttack(); attackBuffered = false; }
 
+        if (Mouse.current.rightButton.isPressed && specialButtonImage != null) specialButtonImage.color = pressedColor;
         if (Mouse.current.rightButton.wasPressedThisFrame && !isAttacking)
         {
             if (KiManager.Instance != null && KiManager.Instance.GetCurrentKi() >= 0.95f)
@@ -90,6 +113,7 @@ public class playermovement1 : MonoBehaviour
         }
 
         // 5. Jump
+        if (Keyboard.current.spaceKey.isPressed && jumpButtonImage != null) jumpButtonImage.color = pressedColor;
         if (Keyboard.current.spaceKey.wasPressedThisFrame && isGrounded)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
@@ -152,5 +176,18 @@ public class playermovement1 : MonoBehaviour
     private void OnDrawGizmosSelected()
     {
         if (attackPoint != null) { Gizmos.color = Color.red; Gizmos.DrawWireSphere(attackPoint.position, attackRange); }
+    }
+
+    private void ResetButtonColors()
+    {
+        // Kembalikan ke warna putih (normal) tapi Alphanya dikunci pakai Alpha transparan asli bawaanmu
+        if (atkButtonImage != null && !Mouse.current.leftButton.isPressed) 
+            atkButtonImage.color = new Color(1f, 1f, 1f, atkAlphaOriginal);
+
+        if (specialButtonImage != null && !Mouse.current.rightButton.isPressed) 
+            specialButtonImage.color = new Color(1f, 1f, 1f, specialAlphaOriginal);
+
+        if (jumpButtonImage != null && !Keyboard.current.spaceKey.isPressed) 
+            jumpButtonImage.color = new Color(1f, 1f, 1f, jumpAlphaOriginal);
     }
 }

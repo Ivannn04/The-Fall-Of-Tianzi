@@ -9,13 +9,23 @@ public class GameOverManager : MonoBehaviour
 
     [Header("Audio Settings")]
     public AudioSource audioSource;  
+    public AudioClip gameplayBGM;    // BARU: Tempat narik lagu tema stage/level
     public AudioClip victorySound;
-    public AudioClip loseSound;      // BARU: Tempat memasukkan audio kekalahan
+    public AudioClip loseSound;      
 
     void Start()
     {
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (winningPanel != null) winningPanel.SetActive(false);
+
+        // BARU: Otomatis putar musik gameplay di awal stage
+        if (audioSource != null && gameplayBGM != null)
+        {
+            audioSource.clip = gameplayBGM;
+            audioSource.loop = true; // Paksa BGM agar terus mengulang (loop) saat habis
+            audioSource.volume = 0.5f; // Atur volume BGM (50%) agar tidak menutupi SFX
+            audioSource.Play();
+        }
     }
 
     // Fungsi Game Over
@@ -28,10 +38,12 @@ public class GameOverManager : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
 
-            // BARU: Putar musik/efek suara kekalahan jika ada
-            if (audioSource != null && loseSound != null)
+            // BARU: Matikan BGM gameplay terlebih dahulu agar suaranya tidak tabrakan
+            if (audioSource != null)
             {
-                audioSource.PlayOneShot(loseSound);
+                audioSource.Stop(); 
+                // Putar musik kekalahan sekali saja (tidak loop)
+                if (loseSound != null) audioSource.PlayOneShot(loseSound, 0.7f);
             }
         }
     }
@@ -46,9 +58,12 @@ public class GameOverManager : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
 
-            if (audioSource != null && victorySound != null)
+            // BARU: Matikan BGM gameplay terlebih dahulu
+            if (audioSource != null)
             {
-                audioSource.PlayOneShot(victorySound);
+                audioSource.Stop(); 
+                // Putar musik kemenangan sekali saja (tidak loop)
+                if (victorySound != null) audioSource.PlayOneShot(victorySound, 0.7f);
             }
         }
     }

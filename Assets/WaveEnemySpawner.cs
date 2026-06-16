@@ -37,8 +37,8 @@ public class WaveEnemySpawner : MonoBehaviour
         // Pastikan UI Start menyala di awal game
         if (startPromptText != null) startPromptText.SetActive(true);
 
-        // Tampilkan inisialisasi awal objective (0/15) saat game baru dimulai
-        UpdateObjectiveUI();
+        // TAMBAHKAN INI: Matikan objek teks obyektif di awal game agar tidak kelihatan
+        if (objectiveText != null) objectiveText.gameObject.SetActive(false);
     }
 
     void Update()
@@ -61,6 +61,12 @@ public class WaveEnemySpawner : MonoBehaviour
 
         // Matikan UI Start dari layar
         if (startPromptText != null) startPromptText.SetActive(false);
+
+        if (objectiveText != null) objectiveText.gameObject.SetActive(true);
+
+        // PERBAIKAN: Tampilkan inisialisasi awal objective (0/15) serempak tepat saat game baru dimulai!
+        UpdateObjectiveUI();
+        
 
         // Mulai hitung mundur Wave 1
         StartCoroutine(StartNextWaveWithTimer(true));
@@ -174,7 +180,7 @@ public class WaveEnemySpawner : MonoBehaviour
     {
         if (objectiveText != null)
         {
-            objectiveText.text = "Objective: Kill Enemies (" + totalEnemiesKilled + "/" + totalTargetKills + ")";
+            objectiveText.text = "Kill The Enemies! (" + totalEnemiesKilled + "/" + totalTargetKills + ")";
         }
     }
 
