@@ -10,12 +10,12 @@ public class KiManager : MonoBehaviour
     public float currentKi = 3f;  // Mulai game dengan 3 tong penuh
 
     [Header("UI Elements (3 Objek Tong)")]
-    // Masukkan 3 UI Image dari tong kamu ke sini (KL1, KL1 (1), KL1 (2))
     public Image[] tongImages; 
 
-    [Header("Sprite Aset Tong")]
-    public Sprite spriteTongIsi;   // Tarik aset gambar tong yang ADA ISINYA ke sini
-    public Sprite spriteTongKosong; // Tarik aset gambar tong yang KOSONG ke sini
+    [Header("Sprite Aset Tong (3 Variasi)")]
+    public Sprite spriteTongIsi;       // Gambar tong PENUH warna biru
+    public Sprite spriteTongSetengah;   // BARU: Gambar tong setengah isi (0.5)
+    public Sprite spriteTongKosong;     // Gambar tong KOSONG
 
     void Awake()
     {
@@ -28,12 +28,23 @@ public class KiManager : MonoBehaviour
         UpdateKiUI();
     }
 
+    // Fungsi mengambil data Ki saat ini untuk dicek oleh skrip Player
+    public float GetCurrentKi()
+    {
+        return currentKi;
+    }
+
     // Fungsi mengurangi energi saat klik kanan (berkurang 1 tong)
     public bool TryUseKi()
     {
-        if (currentKi >= 1f)
+        // Beri toleransi desimal kecil agar tidak tersangkut di angka 0.99f akibat pembulatan internal komputer
+        if (currentKi >= 0.95f)
         {
             currentKi -= 1f;
+            
+            // Pengaman desimal gaib
+            if (currentKi < 0.05f) currentKi = 0f;
+
             UpdateKiUI();
             return true; 
         }
@@ -54,24 +65,26 @@ public class KiManager : MonoBehaviour
         {
             if (tongImages[i] == null) continue;
 
-            // --- KUNCI UTAMA: ATUR FILL AMOUNT DAN GANTI SPRITE ---
-            if (currentKi >= i + 1)
+            // Selalu set fillAmount ke 1f agar sprite pixel art-mu muncul utuh tanpa terpotong kaku
+            tongImages[i].fillAmount = 1f;
+
+            // Hitung sisa Ki khusus untuk tong di indeks ke-i ini
+            float kiForThisTong = currentKi - i;
+
+            if (kiForThisTong >= 0.95f)
             {
-                // Tong Full
+                // Status 1: Tong Penuh Total
                 tongImages[i].sprite = spriteTongIsi;
-                tongImages[i].fillAmount = 1f;
             }
-            else if (currentKi > i)
+            else if (kiForThisTong >= 0.45f && kiForThisTong < 0.95f)
             {
-                // Tong Terisi Sebagian (misal saat nambah 0.5 dari melee)
-                tongImages[i].sprite = spriteTongIsi;
-                tongImages[i].fillAmount = currentKi - i; 
+                // Status 2: Tong Terisi Setengah (Nilai mendekati 0.5)
+                tongImages[i].sprite = spriteTongSetengah;
             }
             else
             {
-                // Tong Kosong Total -> Ganti ke Sprite Tong Kosong, set fillAmount ke 1 agar gambarnya muncul utuh
+                // Status 3: Tong Kosong Total
                 tongImages[i].sprite = spriteTongKosong;
-                tongImages[i].fillAmount = 1f; 
             }
         }
     }
