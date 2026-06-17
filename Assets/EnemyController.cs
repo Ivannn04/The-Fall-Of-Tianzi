@@ -9,6 +9,14 @@ public class EnemyController : MonoBehaviour
     private Rigidbody2D rb;
     private Animator anim; 
 
+    [Header("Hit Feedback")]
+    public float flashDuration = 0.15f;    
+    private SpriteRenderer spriteRenderer; 
+    private Color originalColor;           
+    private bool isFlashing = false;
+    public AudioSource audioSource;       // Tempat narik AudioSource musuh
+    public AudioClip hitSound;            // Tempat memasukkan audio kena hit
+
     [Header("Jump Settings")]
     public float jumpForce = 6.5f;         
     public float obstacleCheckDistance = 0.7f; 
@@ -19,15 +27,15 @@ public class EnemyController : MonoBehaviour
     private int currentHealth;
     public int damageValue = 1;
 
-    [Header("Hit Feedback")]
-    public float flashDuration = 0.15f;    
-    private SpriteRenderer spriteRenderer; 
-    private Color originalColor;           
-    private bool isFlashing = false;
+    // Tambahan Duplikasi "Hit Feedback" kemarin sudah dihapus bersih di sini
 
     [Header("Attack Cooldown")]
     public float attackCooldown = 1f;
     private float nextAttackTime;
+
+    [Header("Drop Item Settings")] 
+    public GameObject hpItemPrefab; // Tarik Prefab Potion/Heart ke sini di Inspector
+    [Range(0, 100)] public float dropChance = 25f; // Peluang drop 25%
 
     private WaveEnemySpawner spawnerReference;
 
@@ -69,84 +77,74 @@ public class EnemyController : MonoBehaviour
     }
 
     void MoveAndJumpLogic()
-{
-    if (rb == null) return;
-
-    // Hitung arah horizontal ke player
-    Vector2 direction = (playerTransform.position - transform.position).normalized;
-
-    // Cek apakah musuh sedang berada dalam state menyerang "Enem_Atk"
-    bool isAttacking = false;
-    if (anim != null)
     {
-        isAttacking = anim.GetCurrentAnimatorStateInfo(0).IsName("Enem_Atk") || 
-                      anim.GetAnimatorTransitionInfo(0).anyState; 
-    }
+        if (rb == null) return;
 
-    // --- KONTROL ANIMASI JALAN & GERAKAN ---
-    if (!isAttacking)
-    {
-        // Gerakan horizontal menggunakan fisika velocity
-        rb.linearVelocity = new Vector2(direction.x * moveSpeed, rb.linearVelocity.y);
-        
+        Vector2 direction = (playerTransform.position - transform.position).normalized;
+
+        bool isAttacking = false;
         if (anim != null)
         {
-            // Kirim parameter speed konstan (menggunakan moveSpeed) agar transisi "Greater 0.1" mengunci mutlak
-            anim.SetFloat("Speed", moveSpeed);
+            isAttacking = anim.GetCurrentAnimatorStateInfo(0).IsName("Enem_Atk") || 
+                          anim.GetAnimatorTransitionInfo(0).anyState; 
+        }
+
+        if (!isAttacking)
+        {
+            rb.linearVelocity = new Vector2(direction.x * moveSpeed, rb.linearVelocity.y);
+            
+            if (anim != null)
+            {
+                anim.SetFloat("Speed", moveSpeed);
+            }
+        }
+        else
+        {
+            rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+            if (anim != null)
+            {
+                anim.SetFloat("Speed", 0f);
+            }
+        }
+
+        if (isGrounded && !isAttacking)
+        {
+            bool playerIsAbove = (playerTransform.position.y - transform.position.y) > 0.5f;
+            bool isCloseHorizontal = Mathf.Abs(playerTransform.position.x - transform.position.x) < 2.5f;
+            bool jumpBecausePlayerAbove = playerIsAbove && isCloseHorizontal;
+
+            Physics2D.queriesStartInColliders = false;
+
+            Vector2 rayDirection = rb.linearVelocity.x > 0 ? Vector2.right : Vector2.left;
+            
+            Vector2 rayOriginLow = (Vector2)transform.position - new Vector2(0, 0.3f) + (rayDirection * 0.2f);
+            Vector2 rayOriginHigh = (Vector2)transform.position + (rayDirection * 0.2f);
+
+            RaycastHit2D hitLow = Physics2D.Raycast(rayOriginLow, rayDirection, obstacleCheckDistance);
+            RaycastHit2D hitHigh = Physics2D.Raycast(rayOriginHigh, rayDirection, obstacleCheckDistance);
+
+            bool hitObstacleGround = (hitLow.collider != null && hitLow.collider.CompareTag("Ground")) || 
+                                     (hitHigh.collider != null && hitHigh.collider.CompareTag("Ground"));
+
+            if (hitObstacleGround || jumpBecausePlayerAbove)
+            {
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+                isGrounded = false; 
+            }
+        }
+
+        if (!isAttacking && spriteRenderer != null)
+        {
+            if (direction.x > 0)
+            {
+                spriteRenderer.flipX = true; 
+            }
+            else if (direction.x < 0)
+            {
+                spriteRenderer.flipX = false;
+            }
         }
     }
-    else
-    {
-        // Hentikan gerakan jalan saat menyerang agar tidak meluncur kaku (sliding)
-        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-        if (anim != null)
-        {
-            anim.SetFloat("Speed", 0f);
-        }
-    }
-
-    // --- LOGIKA LOMPAT OTOMATIS ---
-    if (isGrounded && !isAttacking)
-    {
-        bool playerIsAbove = (playerTransform.position.y - transform.position.y) > 0.5f;
-        bool isCloseHorizontal = Mathf.Abs(playerTransform.position.x - transform.position.x) < 2.5f;
-        bool jumpBecausePlayerAbove = playerIsAbove && isCloseHorizontal;
-
-        Physics2D.queriesStartInColliders = false;
-
-        // Tentukan arah raycast berdasarkan arah velocity fisika
-        Vector2 rayDirection = rb.linearVelocity.x > 0 ? Vector2.right : Vector2.left;
-        
-        Vector2 rayOriginLow = (Vector2)transform.position - new Vector2(0, 0.3f) + (rayDirection * 0.2f);
-        Vector2 rayOriginHigh = (Vector2)transform.position + (rayDirection * 0.2f);
-
-        RaycastHit2D hitLow = Physics2D.Raycast(rayOriginLow, rayDirection, obstacleCheckDistance);
-        RaycastHit2D hitHigh = Physics2D.Raycast(rayOriginHigh, rayDirection, obstacleCheckDistance);
-
-        bool hitObstacleGround = (hitLow.collider != null && hitLow.collider.CompareTag("Ground")) || 
-                                 (hitHigh.collider != null && hitHigh.collider.CompareTag("Ground"));
-
-        if (hitObstacleGround || jumpBecausePlayerAbove)
-        {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
-            isGrounded = false; 
-        }
-    }
-
-    // --- PERBAIKAN UTAMA: FLIP SPRITE MENGGUNAKAN SPRITERENDERER (ANTI-BUG) ---
-    if (!isAttacking && spriteRenderer != null)
-    {
-        if (direction.x > 0)
-        {
-            // Jika sprite awalmu menghadap kiri, maka saat ke kanan flipX = true (sesuaikan jika terbalik)
-            spriteRenderer.flipX = true; 
-        }
-        else if (direction.x < 0)
-        {
-            spriteRenderer.flipX = false;
-        }
-    }
-}
 
     public void RegisterSpawner(WaveEnemySpawner spawner)
     {
@@ -157,6 +155,12 @@ public class EnemyController : MonoBehaviour
     {
         currentHealth -= damageAmount;
         Debug.Log(gameObject.name + " terkena serangan! Sisa HP: " + currentHealth);
+
+        // Putar suara musuh terkena hit jika klip suaranya ada
+        if (audioSource != null && hitSound != null)
+        {
+            audioSource.PlayOneShot(hitSound);
+        }
 
         StartCoroutine(FlashRedEffect());
 
@@ -180,16 +184,49 @@ public class EnemyController : MonoBehaviour
 
     void DieWithDelay()
     {
+        // 1. Amankan drop item paling pertama sebelum komponen dihancurkan!
+        CheckDropItem();
+
+        // FIX BARU: Paksa sprite musuh langsung berubah jadi MERAH instan saat mati!
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = Color.red; 
+        }
+
+        // 2. Putar suara mati secara mandiri di posisi musuh agar tidak kepotong Destroy
+        if (hitSound != null)
+        {
+            AudioSource.PlayClipAtPoint(hitSound, transform.position, 1f); 
+        }
+
+        // 3. Beritahu spawner kalau musuh kalah
         if (spawnerReference != null)
         {
             spawnerReference.OnEnemyDefeated();
         }
 
+        // 4. Matikan collider dan fisik agar tidak mengganggu player lagi
         Collider2D col = GetComponent<Collider2D>();
         if (col != null) col.enabled = false;
         if (rb != null) rb.linearVelocity = Vector2.zero;
 
+        // 5. Hancurkan game object musuh mengikuti durasi flashDuration
+        // Pastikan variabel flashDuration di Inspector kamu bernilai minimal 0.15f atau 0.2f 
+        // supaya mata kita sempat melihat kedipan merahnya sebelum musuh hilang!
         Destroy(gameObject, flashDuration);
+    }
+
+    void CheckDropItem()
+    {
+        if (hpItemPrefab == null) return;
+
+        float randomRoll = Random.Range(0f, 100f);
+
+        if (randomRoll <= dropChance)
+        {
+            Instantiate(hpItemPrefab, transform.position, Quaternion.identity);
+            Debug.Log(gameObject.name + " menjatuhkan item HP!");
+        }
     }
 
     private void OnCollisionEnter2D(Collision2D collision)

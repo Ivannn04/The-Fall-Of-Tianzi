@@ -1,39 +1,127 @@
 using UnityEngine;
+using System.Collections;
+using UnityEngine.InputSystem; // WAJIB ada ini untuk sistem input baru Unity
+using TMPro; // WAJIB ada ini untuk mengatur teks TextMeshPro Objective
 
 public class WaveEnemySpawner : MonoBehaviour
 {
+    [Header("Import UI Manager")]
+    public GameOverManager uiManager; // Tarik objek _GameOverManager ke sini di Inspector
+
     [Header("Pool Musuh & Lokasi")]
     public GameObject[] enemyPrefabs; 
     public Transform[] spawnPoints;     
 
     [Header("Pengaturan Target Game")]
-    public int totalTargetKills = 15;   // Batas maksimum total kill untuk menang
+    public int totalTargetKills = 15;   
     
+    [Header("Pengaturan Jeda UI Wave")]
+    public float timeBetweenWaves = 5f; 
+
+    [Header("UI Awal Game (Start Prompt)")]
+    public GameObject startPromptText; // Drag & Drop objek 'StartPromptText' ke sini
+
+    [Header("UI Objective Settings")]
+    public TextMeshProUGUI objectiveText; 
+    public GameObject fpsTextObject; // Drag & Drop objek teks 'ObjectiveText' ke sini
+
     // Status Tracker
     private int totalEnemiesKilled = 0; 
     private int currentWaveNumber = 1;
     private int enemiesRemainingInWave = 0;
+    private bool isWaitingForNextWave = false; 
+    private bool gameHasStarted = false; 
+    private bool gameIsOver = false; // Pengaman agar wave berhenti total saat menang/kalah
 
     void Start()
     {
-        // Memulai Wave pertama saat game start
-        StartNextWave();
+        if (fpsTextObject != null) fpsTextObject.SetActive(false);
+
+        // Pastikan UI Start menyala di awal game
+        if (startPromptText != null) startPromptText.SetActive(true);
+
+        // TAMBAHKAN INI: Matikan objek teks obyektif di awal game agar tidak kelihatan
+        if (objectiveText != null) objectiveText.gameObject.SetActive(false);
     }
 
-    void StartNextWave()
+    void Update()
     {
-        // Cek apakah target 15 kill sudah tercapai
-        if (totalEnemiesKilled >= totalTargetKills)
+        if (gameIsOver) return; // Jika game sudah selesai, matikan semua fungsi update spawner
+
+        // JURUS ANTI-GAGAL INPUT SYSTEM BARU:
+        if (!gameHasStarted && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            Debug.Log("Klik mouse kiri terdeteksi secara global! Memulai game...");
+            PlayerClickedToStart();
+        }
+    }
+
+    public void PlayerClickedToStart()
+    {
+        if (gameHasStarted || gameIsOver) return; 
+
+        gameHasStarted = true;
+
+        // Matikan UI Start dari layar
+        if (startPromptText != null) startPromptText.SetActive(false);
+
+        if (objectiveText != null) objectiveText.gameObject.SetActive(true);
+
+        if (fpsTextObject != null) fpsTextObject.SetActive(true);
+
+        // PERBAIKAN: Tampilkan inisialisasi awal objective (0/15) serempak tepat saat game baru dimulai!
+        UpdateObjectiveUI();
+        
+
+        // Mulai hitung mundur Wave 1
+        StartCoroutine(StartNextWaveWithTimer(true));
+    }
+
+    IEnumerator StartNextWaveWithTimer(bool isFirstWave)
+    {
+        isWaitingForNextWave = true;
+
+        while (WaveUIManager.Instance == null)
+        {
+            yield return null; 
+        }
+
+        // Cek sebelum menampilkan notifikasi wave ke layar UI
+        if (gameIsOver || totalEnemiesKilled >= totalTargetKills)
+        {
+            isWaitingForNextWave = false;
+            yield break; // Hentikan coroutine detik ini juga
+        }
+
+        WaveUIManager.Instance.ShowWaveNotice(currentWaveNumber);
+
+        float countdown = timeBetweenWaves;
+        while (countdown > 0)
+        {
+            // Jika di tengah hitung mundur tiba-tiba pemain menang, langsung potong kompas keluar
+            if (gameIsOver) { WaveUIManager.Instance.UpdateTimerText(0); yield break; }
+
+            WaveUIManager.Instance.UpdateTimerText(countdown);
+            yield return new WaitForSeconds(1f);
+            countdown--;
+        }
+
+        WaveUIManager.Instance.UpdateTimerText(0);
+        isWaitingForNextWave = false;
+
+        ActualSpawnLogic();
+    }
+
+    void ActualSpawnLogic()
+    {
+        // Cek kemenangan utama
+        if (totalEnemiesKilled >= totalTargetKills || gameIsOver)
         {
             WinGame();
             return;
         }
 
-        // Menentukan jumlah musuh yang spawn di wave ini berdasarkan nomor wave
-        // Misal: Wave 1 = 1 musuh, Wave 2 = 2 musuh, Wave 3 = 3 musuh, dst.
         int enemiesToSpawn = currentWaveNumber;
-
-        // Jaga agar jumlah musuh tidak melebihi sisa target menuju 15 kill
         int remainingToTarget = totalTargetKills - totalEnemiesKilled;
         if (enemiesToSpawn > remainingToTarget)
         {
@@ -41,11 +129,8 @@ public class WaveEnemySpawner : MonoBehaviour
         }
 
         Debug.Log("Memulai Wave " + currentWaveNumber + " | Memunculkan " + enemiesToSpawn + " Musuh");
-
-        // Set jumlah musuh aktif yang harus dihabisi di wave ini
         enemiesRemainingInWave = enemiesToSpawn;
 
-        // Lakukan perulangan untuk men-spawn musuh sesuai jumlahnya
         for (int i = 0; i < enemiesToSpawn; i++)
         {
             SpawnRandomEnemy();
@@ -53,52 +138,79 @@ public class WaveEnemySpawner : MonoBehaviour
     }
 
     void SpawnRandomEnemy()
-{
-    if (enemyPrefabs.Length == 0 || spawnPoints.Length == 0) return;
-
-    // 1. Acak jenis musuh dan lokasi spawn
-    int randomEnemyIndex = Random.Range(0, enemyPrefabs.Length);
-    int randomPointIndex = Random.Range(0, spawnPoints.Length);
-
-    GameObject selectedEnemyPrefab = enemyPrefabs[randomEnemyIndex];
-    Transform selectedSpawnPoint = spawnPoints[randomPointIndex];
-
-    // 2. KUNCI UTAMA: Kita pakai Instantiate tapi posisinya di-set terpisah 
-    // agar skrip terhubung dulu sebelum musuh melakukan kalkulasi fisik di game
-    GameObject spawnedEnemy = Instantiate(selectedEnemyPrefab, selectedSpawnPoint.position, selectedSpawnPoint.rotation);
-    
-    // Hubungkan spawner ke musuh yang baru lahir
-    EnemyController enemyScript = spawnedEnemy.GetComponent<EnemyController>();
-    if (enemyScript != null)
     {
-        enemyScript.RegisterSpawner(this);
-    }
-    else
-    {
-        Debug.LogError("Waduh! Prefab musuhmu belum dipasang skrip 'EnemyController' nih!");
-    }
-}
+        if (enemyPrefabs.Length == 0 || spawnPoints.Length == 0 || gameIsOver) return;
 
-    // Fungsi ini akan dipanggil oleh musuh sesaat sebelum mereka hancur/mati
+        int randomEnemyIndex = Random.Range(0, enemyPrefabs.Length);
+        int randomPointIndex = Random.Range(0, spawnPoints.Length);
+
+        GameObject selectedEnemyPrefab = enemyPrefabs[randomEnemyIndex];
+        Transform selectedSpawnPoint = spawnPoints[randomPointIndex];
+
+        GameObject spawnedEnemy = Instantiate(selectedEnemyPrefab, selectedSpawnPoint.position, selectedSpawnPoint.rotation);
+        
+        EnemyController enemyScript = spawnedEnemy.GetComponent<EnemyController>();
+        if (enemyScript != null)
+        {
+            enemyScript.RegisterSpawner(this);
+        }
+    }
+
     public void OnEnemyDefeated()
     {
+        if (gameIsOver) return;
+
         totalEnemiesKilled++;
         enemiesRemainingInWave--;
 
-        Debug.Log("Musuh Mati! Total Kill: " + totalEnemiesKilled + "/" + totalTargetKills);
+        // Setiap ada musuh mati, perbarui teks hitungan secara realtime
+        UpdateObjectiveUI();
 
-        // Jika semua musuh di wave ini sudah mati, lanjut ke wave berikutnya
-        if (enemiesRemainingInWave <= 0)
+        // Cek langsung: Apakah kematian musuh ini menyentuh target kemenangan?
+        if (totalEnemiesKilled >= totalTargetKills)
+        {
+            WinGame();
+            return; // Keluar langsung
+        }
+
+        // Jika musuh di wave ini habis, lanjut ke wave berikutnya
+        if (enemiesRemainingInWave <= 0 && !isWaitingForNextWave)
         {
             currentWaveNumber++;
-            // Beri sedikit jeda waktu sebelum wave berikutnya muncul (misal 1.5 detik)
-            Invoke("StartNextWave", 1.5f); 
+            StartCoroutine(StartNextWaveWithTimer(false)); 
+        }
+    }
+
+    void UpdateObjectiveUI()
+    {
+        if (objectiveText != null)
+        {
+            objectiveText.text = "Kill The Enemies! (" + totalEnemiesKilled + "/" + totalTargetKills + ")";
         }
     }
 
     void WinGame()
     {
-        Debug.Log("Selamat! Kamu berhasil mengalahkan 15 musuh dan memenangkan pertandingan!");
-        // Tambahkan logika menang di sini (misal munculin UI menang atau pindah scene)
+        if (gameIsOver) return; // Mencegah pemanggilan ganda
+
+        gameIsOver = true; // Kunci status game selesai!
+        StopAllCoroutines(); // Paksa matikan seluruh hitung mundur wave
+
+        if (objectiveText != null)
+        {
+            objectiveText.text = "STAGE CLEAR!";
+        }
+        
+        // FIX BARU: Panggil panel kemenangan secara resmi di sini!
+        if (uiManager != null)
+        {
+            uiManager.SetupWinning();
+        }
+        else
+        {
+            Debug.LogError("uiManager (GameOverManager) belum di-drag ke slot Spawner di Inspector!");
+        }
+
+        Debug.Log("Selamat! Kamu Menang!");
     }
 }
