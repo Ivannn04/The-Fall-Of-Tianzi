@@ -22,7 +22,8 @@ public class WaveEnemySpawner : MonoBehaviour
     public GameObject startPromptText; // Drag & Drop objek 'StartPromptText' ke sini
 
     [Header("UI Objective Settings")]
-    public TextMeshProUGUI objectiveText; // Drag & Drop objek teks 'ObjectiveText' ke sini
+    public TextMeshProUGUI objectiveText; 
+    public GameObject fpsTextObject; // Drag & Drop objek teks 'ObjectiveText' ke sini
 
     // Status Tracker
     private int totalEnemiesKilled = 0; 
@@ -34,6 +35,8 @@ public class WaveEnemySpawner : MonoBehaviour
 
     void Start()
     {
+        if (fpsTextObject != null) fpsTextObject.SetActive(false);
+
         // Pastikan UI Start menyala di awal game
         if (startPromptText != null) startPromptText.SetActive(true);
 
@@ -63,6 +66,8 @@ public class WaveEnemySpawner : MonoBehaviour
         if (startPromptText != null) startPromptText.SetActive(false);
 
         if (objectiveText != null) objectiveText.gameObject.SetActive(true);
+
+        if (fpsTextObject != null) fpsTextObject.SetActive(true);
 
         // PERBAIKAN: Tampilkan inisialisasi awal objective (0/15) serempak tepat saat game baru dimulai!
         UpdateObjectiveUI();

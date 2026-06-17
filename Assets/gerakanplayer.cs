@@ -65,6 +65,17 @@ public class playermovement1 : MonoBehaviour
             return; 
         }
 
+        if (PauseManager.isPaused)
+    {
+        // Paksa kecepatan fisiknya jadi 0 total agar tidak meluncur gaib
+        if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+        
+        // Matikan animasi lari biar tidak jalan di tempat saat pause
+        if (anim != null) anim.SetFloat("Speed", 0f);
+        
+        return; // JANGAN LANJUTKAN KODE DI BAWAH (Input serang/jalan/lompat diblokir total!)
+    }
+
         ResetButtonColors();
 
         // 2. Logika Pergerakan

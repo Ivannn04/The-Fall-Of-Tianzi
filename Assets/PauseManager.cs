@@ -4,10 +4,12 @@ using UnityEngine.SceneManagement;
 
 public class PauseManager : MonoBehaviour
 {
+    public static bool isPaused = false;
+
     [Header("UI Reference")]
     public GameObject pausePanel; // Tarik PausePanel ke sini
+    public GameObject settingsPanel;
 
-    private bool isPaused = false;
     private float startDelayTimer = 0f;
     private float canToggleTime = 0.2f; // Jeda aman 0.2 detik di awal game
 
@@ -43,20 +45,33 @@ public class PauseManager : MonoBehaviour
     public void PauseGame()
     {
         isPaused = true;
-        if (pausePanel != null) pausePanel.SetActive(true); 
-        Time.timeScale = 0f; 
+        Time.timeScale = 0f;
+        if (pausePanel != null) pausePanel.SetActive(true);
     }
 
     public void ResumeGame()
     {
         isPaused = false;
-        if (pausePanel != null) pausePanel.SetActive(false); 
-        Time.timeScale = 1f; 
+        Time.timeScale = 1f;
+        if (pausePanel != null) pausePanel.SetActive(false);
     }
 
     public void OpenSettings()
     {
-        Debug.Log("Membuka Menu Setting...");
+        // Matikan menu pause
+        if (pausePanel != null) pausePanel.SetActive(false);
+
+        // Nyalakan menu settings
+        if (settingsPanel != null) settingsPanel.SetActive(true);
+    }
+
+    public void CloseSettings()
+    {
+        // Nyalakan kembali menu pause
+        if (pausePanel != null) pausePanel.SetActive(true);
+
+        // Matikan menu settings
+        if (settingsPanel != null) settingsPanel.SetActive(false);
     }
 
     public void BackToMainMenu()

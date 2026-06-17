@@ -13,6 +13,9 @@ public class PlayerAudioManager : MonoBehaviour
     public AudioClip meleeAttackSound;
     public AudioClip rangedAttackSound;
 
+    [Header("Item Settings")]
+    public AudioClip pickupClip;
+
     void Awake()
     {
         // Otomatis mengambil komponen AudioSource yang ada di tubuh MC
@@ -60,6 +63,15 @@ public class PlayerAudioManager : MonoBehaviour
         if (rangedAttackSound != null)
         {
             audioSource.PlayOneShot(rangedAttackSound);
+        }
+    }
+
+    public void PlayPickup()
+    {
+        // Pastikan audioSource dan clip-nya tidak kosong di Inspector
+        if (audioSource != null && pickupClip != null)
+        {
+            audioSource.PlayOneShot(pickupClip);
         }
     }
 }
