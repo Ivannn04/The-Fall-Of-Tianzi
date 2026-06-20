@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Audio; 
 using UnityEngine.UI;    
 using System.Collections; 
-using TMPro; // <-- TAMBAHAN: Diperlukan untuk mendeteksi Dropdown TMP
+using TMPro; 
 
 public class MainMenuManager : MonoBehaviour
 {
@@ -23,10 +23,10 @@ public class MainMenuManager : MonoBehaviour
     public AudioSource bgmSource;
     public AudioMixer mainMixer;     
     public Slider bgmSlider;         
-    public Slider sfxSlider;         // <-- TAMBAHAN: Slot untuk Slider SFX di Main Menu
+    public Slider sfxSlider;         
 
     [Header("FPS Settings")]
-    public TMP_Dropdown fpsDropdown; // <-- TAMBAHAN: Slot untuk Dropdown FPS di Main Menu
+    public TMP_Dropdown fpsDropdown; 
 
     void Start()
     {
@@ -57,7 +57,7 @@ public class MainMenuManager : MonoBehaviour
         if (fpsDropdown != null)
         {
             fpsDropdown.onValueChanged.AddListener(SetFPS);
-            int savedFPS = PlayerPrefs.GetInt("SavedFPS", 1); // Default 60 FPS (index 1)
+            int savedFPS = PlayerPrefs.GetInt("SavedFPS", 1); 
             fpsDropdown.value = savedFPS;
             SetFPS(savedFPS);
         }
@@ -112,7 +112,6 @@ public class MainMenuManager : MonoBehaviour
     }
 
     // ========== FUNGSI PENGATURAN GLOBAL ==========
-    
     public void SetBGMVolume(float sliderValue)
     {
         if (mainMixer != null)
@@ -128,7 +127,7 @@ public class MainMenuManager : MonoBehaviour
     {
         if (mainMixer != null)
         {
-            if (sliderValue <= 0) mainMixer.SetFloat("SFXVolume", -80f); // Pastikan nama parameter di Mixer sesuai
+            if (sliderValue <= 0) mainMixer.SetFloat("SFXVolume", -80f); 
             else mainMixer.SetFloat("SFXVolume", Mathf.Log10(sliderValue) * 20);
         }
         PlayerPrefs.SetFloat("SavedSFX", sliderValue);
@@ -165,9 +164,22 @@ public class MainMenuManager : MonoBehaviour
         if (starter != null) starter.ResetToStart();
     }
 
+    // ========== TAMBAHAN: FUNGSI UNTUK PROLOGUE ==========
+    public void LoadPrologue()
+    {
+        StartCoroutine(FadeAndLoadScene("Prologue")); // Pastikan nama scene di Build Settings persis seperti ini
+    }
+    // =====================================================
+
     public void LoadChapter1()
     {
         StartCoroutine(FadeAndLoadScene("Chapter 1 - Hutan"));
+    }
+
+    public void PlayGame()
+    {
+        // Biasanya tombol "Play" utama langsung mengarah ke awal cerita (Prologue)
+        StartCoroutine(FadeAndLoadScene("Prologue")); 
     }
 
     IEnumerator FadeAndLoadScene(string sceneName)
@@ -184,11 +196,6 @@ public class MainMenuManager : MonoBehaviour
             }
         }
         SceneManager.LoadScene(sceneName);
-    }
-
-    public void PlayGame()
-    {
-        StartCoroutine(FadeAndLoadScene("Chapter 1 - Hutan"));
     }
 
     public void QuitGame()

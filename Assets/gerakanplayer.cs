@@ -65,27 +65,33 @@ public class playermovement1 : MonoBehaviour
             return; 
         }
 
+        // 2. Cek Pause Menu
         if (PauseManager.isPaused)
-    {
-        // Paksa kecepatan fisiknya jadi 0 total agar tidak meluncur gaib
-        if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
-        
-        // Matikan animasi lari biar tidak jalan di tempat saat pause
-        if (anim != null) anim.SetFloat("Speed", 0f);
-        
-        return; // JANGAN LANJUTKAN KODE DI BAWAH (Input serang/jalan/lompat diblokir total!)
-    }
+        {
+            if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+            if (anim != null) anim.SetFloat("Speed", 0f);
+            return; 
+        }
+
+        // === PERBAIKAN UTAMA: HADANG INPUT SAAT SCREENFADER/INTRO JALAN ===
+        // Selama tirai hitam belum selesai membuka, karakter diam total dan anti-bocor klik kiri!
+        if (ChapterIntroManager.IsIntroActive)
+        {
+            if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y); // Cegah meluncur gaib
+            if (anim != null) anim.SetFloat("Speed", 0f); // Paksa animasi idle
+            return; // Keluar dari fungsi Update, amankan semua input euy!
+        }
 
         ResetButtonColors();
 
-        // 2. Logika Pergerakan
+        // 3. Logika Pergerakan
         float move = 0;
         if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) move = -1;
         else if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) move = 1;
 
         rb.linearVelocity = new Vector2(move * speed, rb.linearVelocity.y);
 
-        // 3. Logika Animasi
+        // 4. Logika Animasi
         AnimatorStateInfo stateInfo = anim.GetCurrentAnimatorStateInfo(0);
         bool isAttacking = stateInfo.IsName("Player_atk") || stateInfo.IsName("Player_atk2") || stateInfo.IsName("Ranged_atk"); 
 
@@ -103,7 +109,7 @@ public class playermovement1 : MonoBehaviour
         // Flip Karakter
         if ((move > 0 && !isFacingRight) || (move < 0 && isFacingRight)) Flip();
 
-        // 4. Input Serangan
+        // 5. Input Serangan
         if (Mouse.current.leftButton.isPressed && atkButtonImage != null) atkButtonImage.color = pressedColor;
         if (Mouse.current.leftButton.wasPressedThisFrame)
         {
@@ -123,14 +129,13 @@ public class playermovement1 : MonoBehaviour
             }
         }
 
-        // 5. Jump
+        // 6. Jump
         if (Keyboard.current.spaceKey.isPressed && jumpButtonImage != null) jumpButtonImage.color = pressedColor;
         if (Keyboard.current.spaceKey.wasPressedThisFrame && isGrounded)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
             if (anim != null) anim.SetTrigger("Jump");
             
-            // BARU: Putar suara lompat
             if (audioManager != null) audioManager.PlayJump();
         }
     } 
