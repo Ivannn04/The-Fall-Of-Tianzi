@@ -36,7 +36,7 @@ public class FPSCounter : MonoBehaviour
             if (fpsText != null)
             {
                 // Format teks menjadi angka bulat (0 desimal)
-                fpsText.text = "FPS: " + Mathf.RoundToInt(fps).ToString();
+                fpsText.text = "" + Mathf.RoundToInt(fps).ToString();
             }
 
             // Reset hitungan untuk interval berikutnya
