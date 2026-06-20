@@ -46,13 +46,24 @@ public class WaveEnemySpawner : MonoBehaviour
 
     void Update()
     {
-        if (gameIsOver) return; // Jika game sudah selesai, matikan semua fungsi update spawner
-
-        // JURUS ANTI-GAGAL INPUT SYSTEM BARU:
-        if (!gameHasStarted && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
+        // === 1. HADANG INTRO ===
+        // Selama layar hitam intro fader masih berjalan, kunci total input klik di sini
+        if (ChapterIntroManager.IsIntroActive)
         {
-            Debug.Log("Klik mouse kiri terdeteksi secara global! Memulai game...");
-            PlayerClickedToStart();
+            return; 
+        }
+
+        // === 2. DETEKSI KLIK UNTUK MEMULAI GAME ===
+        if (Mouse.current.leftButton.wasPressedThisFrame)
+        {
+            // Jika game belum pernah dimulai, eksekusi fungsi start
+            if (!gameHasStarted && !gameIsOver)
+            {
+                Debug.Log("Klik mouse kiri terdeteksi secara global! Memulai game...");
+                
+                // === EKSEKUSI UTAMA: Panggil fungsi bawaanmu agar teks hilang dan game mulai ===
+                PlayerClickedToStart(); 
+            }
         }
     }
 

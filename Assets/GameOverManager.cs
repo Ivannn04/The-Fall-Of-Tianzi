@@ -8,24 +8,15 @@ public class GameOverManager : MonoBehaviour
     public GameObject winningPanel;  
 
     [Header("Audio Settings")]
-    public AudioSource audioSource;  
-    public AudioClip gameplayBGM;    // BARU: Tempat narik lagu tema stage/level
+    public AudioSource levelBgmSource; // Tarik AudioSource BGM utama ke sini untuk dimatikan saat kalah/menang
     public AudioClip victorySound;
-    public AudioClip loseSound;      
+    public AudioClip loseSound;       
 
     void Start()
     {
         if (gameOverPanel != null) gameOverPanel.SetActive(false);
         if (winningPanel != null) winningPanel.SetActive(false);
-
-        // BARU: Otomatis putar musik gameplay di awal stage
-        if (audioSource != null && gameplayBGM != null)
-        {
-            audioSource.clip = gameplayBGM;
-            audioSource.loop = true; // Paksa BGM agar terus mengulang (loop) saat habis
-            audioSource.volume = 0.5f; // Atur volume BGM (50%) agar tidak menutupi SFX
-            audioSource.Play();
-        }
+        // Pemutaran BGM otomatis di awal sudah DIHAPUS dari sini euy!
     }
 
     // Fungsi Game Over
@@ -38,12 +29,13 @@ public class GameOverManager : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
 
-            // BARU: Matikan BGM gameplay terlebih dahulu agar suaranya tidak tabrakan
-            if (audioSource != null)
+            // Matikan BGM gameplay utama yang sedang berputar di scene
+            if (levelBgmSource != null)
             {
-                audioSource.Stop(); 
-                // Putar musik kekalahan sekali saja (tidak loop)
-                if (loseSound != null) audioSource.PlayOneShot(loseSound, 0.7f);
+                levelBgmSource.Stop(); 
+                
+                // Putar SFX kekalahan sekali saja lewat source tersebut
+                if (loseSound != null) levelBgmSource.PlayOneShot(loseSound, 0.7f);
             }
         }
     }
@@ -58,12 +50,13 @@ public class GameOverManager : MonoBehaviour
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
 
-            // BARU: Matikan BGM gameplay terlebih dahulu
-            if (audioSource != null)
+            // Matikan BGM gameplay utama yang sedang berputar di scene
+            if (levelBgmSource != null)
             {
-                audioSource.Stop(); 
-                // Putar musik kemenangan sekali saja (tidak loop)
-                if (victorySound != null) audioSource.PlayOneShot(victorySound, 0.7f);
+                levelBgmSource.Stop(); 
+                
+                // Putar SFX kemenangan sekali saja lewat source tersebut
+                if (victorySound != null) levelBgmSource.PlayOneShot(victorySound, 0.7f);
             }
         }
     }

@@ -188,9 +188,22 @@ public class MainMenuManager : MonoBehaviour
         if (starter != null) starter.ResetToStart();
     }
 
+    // ========== TAMBAHAN: FUNGSI UNTUK PROLOGUE ==========
+    public void LoadPrologue()
+    {
+        StartCoroutine(FadeAndLoadScene("Prologue")); // Pastikan nama scene di Build Settings persis seperti ini
+    }
+    // =====================================================
+
     public void LoadChapter1()
     {
         StartCoroutine(FadeAndLoadScene("Chapter 1 - Hutan"));
+    }
+
+    public void PlayGame()
+    {
+        // Biasanya tombol "Play" utama langsung mengarah ke awal cerita (Prologue)
+        StartCoroutine(FadeAndLoadScene("Prologue")); 
     }
 
     IEnumerator FadeAndLoadScene(string sceneName)
@@ -209,12 +222,6 @@ public class MainMenuManager : MonoBehaviour
         SceneManager.LoadScene(sceneName);
     }
 
-    public void PlayGame()
-    {
-        StartCoroutine(FadeAndLoadScene("Chapter 1 - Hutan"));
-    }
-
-    // Fungsi eksekusi akhir saat tombol "Yes" di panel konfirmasi diklik
     public void QuitGame()
     {
         Debug.Log("Game Keluar!"); 
