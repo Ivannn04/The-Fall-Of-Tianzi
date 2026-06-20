@@ -14,6 +14,7 @@ public class MainMenuManager : MonoBehaviour
     public GameObject menuPanel;       
     public GameObject chaptersMenuPanel; 
     public GameObject settingsPanel; 
+    public GameObject quitConfirmationPanel; // <-- TAMBAHAN: Slot untuk Panel Konfirmasi Keluar
 
     [Header("Transition Settings")]
     public CanvasGroup screenFader;    
@@ -62,8 +63,10 @@ public class MainMenuManager : MonoBehaviour
             SetFPS(savedFPS);
         }
 
+        // Pastikan semua panel tertutup di awal game
         if (chaptersMenuPanel != null) chaptersMenuPanel.SetActive(false);
         if (settingsPanel != null) settingsPanel.SetActive(false); 
+        if (quitConfirmationPanel != null) quitConfirmationPanel.SetActive(false); // <-- TAMBAHAN
         
         if (screenFader != null)
         {
@@ -76,19 +79,28 @@ public class MainMenuManager : MonoBehaviour
     {
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
+            // 1. Jika panel quit sedang aktif, tekan ESC untuk membatalkannya
+            if (quitConfirmationPanel != null && quitConfirmationPanel.activeSelf)
+            {
+                CloseQuitMenu();
+                return;
+            }
+            // 2. Jika panel settings aktif, tutup settings
             if (settingsPanel != null && settingsPanel.activeSelf)
             {
                 CloseSettingsMenu();
                 return;
             }
+            // 3. Jika panel chapter aktif, tutup chapter
             if (chaptersMenuPanel != null && chaptersMenuPanel.activeSelf)
             {
                 CloseChaptersMenu();
                 return;
             }
+            // 4. Jika berada di menu utama, tekan ESC akan membuka konfirmasi keluar
             if (menuPanel != null && menuPanel.activeSelf)
             {
-                CloseMenu();
+                OpenQuitMenu(); 
                 return;
             }
         }
@@ -110,6 +122,18 @@ public class MainMenuManager : MonoBehaviour
     {
         SwitchPanel(settingsPanel, menuPanel);
     }
+
+    // --- TAMBAHAN: FUNGSI TOMBOL EXIT & KONFIRMASI ---
+    public void OpenQuitMenu()
+    {
+        SwitchPanel(menuPanel, quitConfirmationPanel);
+    }
+
+    public void CloseQuitMenu()
+    {
+        SwitchPanel(quitConfirmationPanel, menuPanel);
+    }
+    // --------------------------------------------------
 
     // ========== FUNGSI PENGATURAN GLOBAL ==========
     public void SetBGMVolume(float sliderValue)
