@@ -72,6 +72,9 @@ public class SettingsManager : MonoBehaviour
             case 1:
                 Application.targetFrameRate = 120; // Pilihan 60 FPS
                 break;
+            case 2:
+                Application.targetFrameRate = -1; // Pilihan No Limit
+                break;
         }
         PlayerPrefs.SetInt("FPSIndex", index);
     }
