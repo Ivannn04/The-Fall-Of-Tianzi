@@ -71,6 +71,7 @@ public class AnyButtonStarter : MonoBehaviour
         }
     }
 
+
     IEnumerator Transition()
     {
         // Fade Out StartPanel
@@ -86,5 +87,19 @@ public class AnyButtonStarter : MonoBehaviour
             menuCG.alpha = f;
             yield return new WaitForSeconds(0.02f);
         }
+    }
+
+    // Fungsi ini dipanggil oleh MainMenuManager saat kembali ke Start Panel
+    public void ResetToStart()
+    {
+        isMenuOpen = false;           // Buka gerbang input 'press any button' kembali
+        startPanel.SetActive(true);   // Munculkan panelnya
+        
+        if (startCG != null) 
+        {
+            startCG.alpha = 1f;       // Kembalikan visibilitas (hilangkan transparan 0)
+        }
+        
+        StartCoroutine(FloatEffect()); // Jalankan animasi melayang dan kedip lagi
     }
 }
