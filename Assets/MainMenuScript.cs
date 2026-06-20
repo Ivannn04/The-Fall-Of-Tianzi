@@ -5,7 +5,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.Audio; 
 using UnityEngine.UI;    
 using System.Collections; 
-using TMPro; // <-- TAMBAHAN: Diperlukan untuk mendeteksi Dropdown TMP
+using TMPro; 
 
 public class MainMenuManager : MonoBehaviour
 {
@@ -14,6 +14,7 @@ public class MainMenuManager : MonoBehaviour
     public GameObject menuPanel;       
     public GameObject chaptersMenuPanel; 
     public GameObject settingsPanel; 
+    public GameObject quitConfirmationPanel; // <-- TAMBAHAN: Slot untuk Panel Konfirmasi Keluar
 
     [Header("Transition Settings")]
     public CanvasGroup screenFader;    
@@ -23,10 +24,10 @@ public class MainMenuManager : MonoBehaviour
     public AudioSource bgmSource;
     public AudioMixer mainMixer;     
     public Slider bgmSlider;         
-    public Slider sfxSlider;         // <-- TAMBAHAN: Slot untuk Slider SFX di Main Menu
+    public Slider sfxSlider;         
 
     [Header("FPS Settings")]
-    public TMP_Dropdown fpsDropdown; // <-- TAMBAHAN: Slot untuk Dropdown FPS di Main Menu
+    public TMP_Dropdown fpsDropdown; 
 
     void Start()
     {
@@ -57,13 +58,15 @@ public class MainMenuManager : MonoBehaviour
         if (fpsDropdown != null)
         {
             fpsDropdown.onValueChanged.AddListener(SetFPS);
-            int savedFPS = PlayerPrefs.GetInt("SavedFPS", 1); // Default 60 FPS (index 1)
+            int savedFPS = PlayerPrefs.GetInt("SavedFPS", 1); 
             fpsDropdown.value = savedFPS;
             SetFPS(savedFPS);
         }
 
+        // Pastikan semua panel tertutup di awal game
         if (chaptersMenuPanel != null) chaptersMenuPanel.SetActive(false);
         if (settingsPanel != null) settingsPanel.SetActive(false); 
+        if (quitConfirmationPanel != null) quitConfirmationPanel.SetActive(false); // <-- TAMBAHAN
         
         if (screenFader != null)
         {
@@ -76,19 +79,28 @@ public class MainMenuManager : MonoBehaviour
     {
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
+            // 1. Jika panel quit sedang aktif, tekan ESC untuk membatalkannya
+            if (quitConfirmationPanel != null && quitConfirmationPanel.activeSelf)
+            {
+                CloseQuitMenu();
+                return;
+            }
+            // 2. Jika panel settings aktif, tutup settings
             if (settingsPanel != null && settingsPanel.activeSelf)
             {
                 CloseSettingsMenu();
                 return;
             }
+            // 3. Jika panel chapter aktif, tutup chapter
             if (chaptersMenuPanel != null && chaptersMenuPanel.activeSelf)
             {
                 CloseChaptersMenu();
                 return;
             }
+            // 4. Jika berada di menu utama, tekan ESC akan membuka konfirmasi keluar
             if (menuPanel != null && menuPanel.activeSelf)
             {
-                CloseMenu();
+                OpenQuitMenu(); 
                 return;
             }
         }
@@ -111,8 +123,19 @@ public class MainMenuManager : MonoBehaviour
         SwitchPanel(settingsPanel, menuPanel);
     }
 
+    // --- TAMBAHAN: FUNGSI TOMBOL EXIT & KONFIRMASI ---
+    public void OpenQuitMenu()
+    {
+        SwitchPanel(menuPanel, quitConfirmationPanel);
+    }
+
+    public void CloseQuitMenu()
+    {
+        SwitchPanel(quitConfirmationPanel, menuPanel);
+    }
+    // --------------------------------------------------
+
     // ========== FUNGSI PENGATURAN GLOBAL ==========
-    
     public void SetBGMVolume(float sliderValue)
     {
         if (mainMixer != null)
@@ -128,7 +151,7 @@ public class MainMenuManager : MonoBehaviour
     {
         if (mainMixer != null)
         {
-            if (sliderValue <= 0) mainMixer.SetFloat("SFXVolume", -80f); // Pastikan nama parameter di Mixer sesuai
+            if (sliderValue <= 0) mainMixer.SetFloat("SFXVolume", -80f); 
             else mainMixer.SetFloat("SFXVolume", Mathf.Log10(sliderValue) * 20);
         }
         PlayerPrefs.SetFloat("SavedSFX", sliderValue);
@@ -191,6 +214,7 @@ public class MainMenuManager : MonoBehaviour
         StartCoroutine(FadeAndLoadScene("Chapter 1 - Hutan"));
     }
 
+    // Fungsi eksekusi akhir saat tombol "Yes" di panel konfirmasi diklik
     public void QuitGame()
     {
         Debug.Log("Game Keluar!"); 
