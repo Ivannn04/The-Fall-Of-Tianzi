@@ -2,46 +2,49 @@ using UnityEngine;
 
 public class LevelAudioManager : MonoBehaviour
 {
-    [Header("Audio Component")]
-    public AudioSource audioSource;  
+    public static LevelAudioManager Instance { get; private set; }
 
-    [Header("BGM Settings")]
-    public AudioClip gameplayBGM;    
-    
-    [Range(0f, 1f)] 
-    public float bgmVolume = 0.5f; // Nilai volume yang bisa kamu geser-geser di Inspector
+    [Header("Audio Source")]
+    public AudioSource bgmSource; // Cukup satu source untuk mengontrol musik latar
 
-    void Start()
+    [Header("Game Over & Win Music (Played as BGM)")]
+    public AudioClip victorySound;
+    public AudioClip loseSound;
+
+    void Awake()
     {
-        // Setup spesifikasi audio di awal, tapi tidak langsung di-play
-        if (audioSource != null && gameplayBGM != null)
+        if (Instance == null)
         {
-            audioSource.clip = gameplayBGM;
-            audioSource.loop = true; 
-            audioSource.volume = bgmVolume; // Set volume awal
+            Instance = this;
+        }
+        else
+        {
+            Destroy(gameObject);
         }
     }
 
-    void Update()
+    public void StopBGM()
     {
-        // === PERBAIKAN UTAMA ===
-        // Terus pantau dan samakan volume AudioSource dengan slider bgmVolume di Inspector
-        if (audioSource != null && audioSource.volume != bgmVolume)
+        if (bgmSource != null) bgmSource.Stop();
+    }
+
+    public void PlayVictorySound()
+    {
+        StopBGM(); 
+        if (bgmSource != null && victorySound != null)
         {
-            audioSource.volume = bgmVolume;
-            
-            // Catatan: Cara ini juga mempermudah UI Slider Settings kamu nanti 
-            // untuk langsung mengubah variabel 'bgmVolume' ini.
+            bgmSource.clip = victorySound;
+            bgmSource.Play();
         }
     }
 
-    // Fungsi pembantu yang dipanggil oleh ChapterIntroManager
-    public void PlayBGM()
+    public void PlayLoseSound()
     {
-        if (audioSource != null && !audioSource.isPlaying)
+        StopBGM(); 
+        if (bgmSource != null && loseSound != null)
         {
-            audioSource.volume = bgmVolume; // Pastikan volume sinkron saat mulai
-            audioSource.Play();
+            bgmSource.clip = loseSound;
+            bgmSource.Play();
         }
     }
 }
