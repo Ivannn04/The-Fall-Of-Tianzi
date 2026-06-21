@@ -67,6 +67,6 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "The-Fall-Of-Tianzi.slnx",
+    "dotnet.defaultSolution": "pertemuan 9.slnx",
     "dotnet.enableWorkspaceBasedDevelopment": false
 }
