@@ -8,6 +8,9 @@ public class WaveEnemySpawner : MonoBehaviour
     [Header("Import UI Manager")]
     public GameOverManager uiManager; // Tarik objek _GameOverManager ke sini di Inspector
 
+    [Header("Import Chapter Intro Manager")]
+    public ChapterIntroManager chapterIntroManager; // Tarik objek ChapterIntroManager ke sini di Inspector!
+
     [Header("Pool Musuh & Lokasi")]
     public GameObject[] enemyPrefabs; 
     public Transform[] spawnPoints;     
@@ -177,7 +180,7 @@ public class WaveEnemySpawner : MonoBehaviour
         // Setiap ada musuh mati, perbarui teks hitungan secara realtime
         UpdateObjectiveUI();
 
-        // Cek langsung: Apakah kematian musuh ini menyentuh target kemenangan?
+        // Cek langsung: Apakah kemenangan musuh ini menyentuh target kemenangan?
         if (totalEnemiesKilled >= totalTargetKills)
         {
             WinGame();
@@ -212,14 +215,20 @@ public class WaveEnemySpawner : MonoBehaviour
             objectiveText.text = "STAGE CLEAR!";
         }
         
-        // FIX BARU: Panggil panel kemenangan secara resmi di sini!
-        if (uiManager != null)
+        // === MODIFIKASI: Alihkan kemenangan ke Slide Outro Story dulu ===
+        if (chapterIntroManager != null)
         {
-            uiManager.SetupWinning();
+            Debug.Log("Target tercapai! Memulai sekuens Outro Story...");
+            chapterIntroManager.OnObjectiveComplete(); 
         }
         else
         {
-            Debug.LogError("uiManager (GameOverManager) belum di-drag ke slot Spawner di Inspector!");
+            // Fallback (Cadangan): Jika lupa pasang script intro di Inspector, jalankan cara lama biar ga macet game-nya
+            Debug.LogWarning("chapterIntroManager belum dipasang! Menjalankan WinningPanel bawaan.");
+            if (uiManager != null)
+            {
+                uiManager.SetupWinning();
+            }
         }
 
         Debug.Log("Selamat! Kamu Menang!");
