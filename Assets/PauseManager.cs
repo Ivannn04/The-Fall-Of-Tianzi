@@ -19,6 +19,7 @@ public class PauseManager : MonoBehaviour
         isPaused = false;
         Time.timeScale = 1f;
         if (pausePanel != null) pausePanel.SetActive(false);
+        if (settingsPanel != null) settingsPanel.SetActive(false); // Pastikan settings juga mati di awal
         startDelayTimer = 0f;
     }
 
@@ -31,10 +32,17 @@ public class PauseManager : MonoBehaviour
         // Cek input tombol ESC
         if (Keyboard.current != null && Keyboard.current.escapeKey.wasPressedThisFrame)
         {
-            if (isPaused)
+            // 1. Prioritas Pertama: Cek apakah menu Settings sedang terbuka
+            if (settingsPanel != null && settingsPanel.activeSelf)
+            {
+                CloseSettings();
+            }
+            // 2. Jika Settings tidak terbuka, cek apakah game sedang di-pause
+            else if (isPaused)
             {
                 ResumeGame();
             }
+            // 3. Jika game sedang berjalan normal, maka Pause gamenya
             else
             {
                 PauseGame();
