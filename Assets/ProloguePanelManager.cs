@@ -21,6 +21,7 @@ public class ProloguePanelManager : MonoBehaviour
 
     [Header("UI References")]
     public Button nextButton;           
+    public Button openSettingsButton; // BARU: Drag & Drop tombol settings kamu ke sini di Inspector
     public CanvasGroup screenFader;     
     public TextMeshProUGUI prologueTitleText; 
 
@@ -51,10 +52,15 @@ public class ProloguePanelManager : MonoBehaviour
 
     void Start()
     {
+        if (nextButton != null) nextButton.onClick.AddListener(ShowNextSlide);
+        
+        // BARU: Daftarkan fungsi klik untuk tombol open settings
+        if (openSettingsButton != null) openSettingsButton.onClick.AddListener(ToggleSettingsPanel);
+
         if (nextButton != null) nextButton.interactable = false;
         if (settingsPanel != null) settingsPanel.SetActive(false);
 
-        // === SINKRONISASI AUDIO AWAL (Mengikuti Key MainMenu Kamu euy!) ===
+        // === SINKRONISASI AUDIO AWAL ===
         float savedBGM = PlayerPrefs.GetFloat("SavedBGM", 1f); 
         float savedSFX = PlayerPrefs.GetFloat("SavedSFX", 1f);
 
@@ -62,8 +68,7 @@ public class ProloguePanelManager : MonoBehaviour
         if (sfxSource != null) sfxSource.volume = savedSFX;
         if (fireAmbientSource != null) fireAmbientSource.volume = savedBGM;
 
-        // Terapkan limit FPS yang disimpan dari MainMenu saat prologue dimulai
-        int savedFPSIndex = PlayerPrefs.GetInt("SavedFPS", 1); // Default index 1 (120 FPS di MainMenu kamu)
+        int savedFPSIndex = PlayerPrefs.GetInt("SavedFPS", 1); 
         ApplySavedFPS(savedFPSIndex);
 
         if (screenFader != null)
@@ -76,8 +81,6 @@ public class ProloguePanelManager : MonoBehaviour
         {
             prologueTitleText.color = new Color(prologueTitleText.color.r, prologueTitleText.color.g, prologueTitleText.color.b, 0f);
         }
-
-        if (nextButton != null) nextButton.onClick.AddListener(ShowNextSlide);
 
         InitSlides();
         StartCoroutine(PlayPrologueIntro());
@@ -96,92 +99,79 @@ public class ProloguePanelManager : MonoBehaviour
     {
         if (settingsPanel == null) return;
 
-        // Cek status aktif panel saat ini
         bool isCurrentlyActive = settingsPanel.activeSelf;
         
-        // Balikkan kondisinya (jika nyala jadi mati, jika mati jadi nyala)
         settingsPanel.SetActive(!isCurrentlyActive);
-
-        // Integrasikan dengan PauseManager global kamu
         PauseManager.isPaused = !isCurrentlyActive; 
 
-        // Atur jalannya waktu game
         if (!isCurrentlyActive)
         {
-            Time.timeScale = 0f; // Hentikan waktu dunia game
-            if (nextButton != null) nextButton.interactable = false; // Kunci tombol next selama pause
+            Time.timeScale = 0f; 
+            if (nextButton != null) nextButton.interactable = false; 
+            if (openSettingsButton != null) openSettingsButton.interactable = false; // BARU: Kunci tombol setting saat panel terbuka
             
-            // === LINK LOGIKA SLIDER PROLOGUE SAAT DI-PAUSE ===
             InitPrologueSliders();
             Debug.Log("Prologue Di-pause, Menampilkan Settings.");
         }
         else
         {
-            Time.timeScale = 1f; // Jalankan waktu normal kembali
-            if (nextButton != null) nextButton.interactable = true; // Buka kembali tombol next
+            Time.timeScale = 1f; 
+            if (nextButton != null) nextButton.interactable = true; 
+            if (openSettingsButton != null) openSettingsButton.interactable = true; // BARU: Buka kembali tombol setting saat panel tutup
             Debug.Log("Settings Ditutup, Melanjutkan Prologue.");
         }
     }
 
-    // FUNGSI KHUSUS: Pasang fungsi ini pada Event OnClick() milik Tombol "Back / Close / Resume" di dalam panel UI Settings kamu
     public void CloseSettingsViaButton()
     {
         if (settingsPanel != null) settingsPanel.SetActive(false);
         PauseManager.isPaused = false;
         Time.timeScale = 1f;
         if (nextButton != null) nextButton.interactable = true;
+        if (openSettingsButton != null) openSettingsButton.interactable = true; // BARU: Kembalikan interaksi tombol setting
     }
-
-    // ================= LOGIKA SINKRONISASI PENGATURAN DI PROLOGUE =================
 
     private void InitPrologueSliders()
     {
-        // Cari komponen UI Slider & Dropdown secara otomatis di dalam SettingsPanel
         Slider[] sliders = settingsPanel.GetComponentsInChildren<Slider>(true);
         TMP_Dropdown dropdown = settingsPanel.GetComponentInChildren<TMP_Dropdown>(true);
 
-        // Sinkronisasi nilai slider BGM & SFX 
         foreach (Slider slider in sliders)
         {
             string sliderName = slider.gameObject.name.ToLower();
 
-            // === BLOK BGM (Sekarang Musik + Suara Api Masuk Sini!) ===
             if (sliderName.Contains("bgm") || sliderName.Contains("music") || sliderName.Contains("bcm"))
             {
                 float savedBGM = PlayerPrefs.GetFloat("SavedBGM", 1f);
                 slider.value = savedBGM;
                 
-                // Set volume awal saat panel dibuka
                 if (bgmSource != null) bgmSource.volume = savedBGM;
-                if (fireAmbientSource != null) fireAmbientSource.volume = savedBGM; // Api ikut volume BGM
+                if (fireAmbientSource != null) fireAmbientSource.volume = savedBGM; 
 
                 slider.onValueChanged.RemoveAllListeners();
                 slider.onValueChanged.AddListener((val) => {
                     PlayerPrefs.SetFloat("SavedBGM", val);
                     if (bgmSource != null) bgmSource.volume = val; 
-                    if (fireAmbientSource != null) fireAmbientSource.volume = val; // Api dikontrol real-time oleh Slider BGM
+                    if (fireAmbientSource != null) fireAmbientSource.volume = val; 
                     PlayerPrefs.Save();
                 });
             }
-            // === BLOK SFX (Hanya Efek Suara Saja) ===
             else if (sliderName.Contains("sfx") || sliderName.Contains("sound") || sliderName.Contains("effect"))
             {
                 float savedSFX = PlayerPrefs.GetFloat("SavedSFX", 1f);
                 slider.value = savedSFX;
 
-                // Set volume awal untuk SFX saja
                 if (sfxSource != null) sfxSource.volume = savedSFX;
 
                 slider.onValueChanged.RemoveAllListeners();
                 slider.onValueChanged.AddListener((val) => {
                     PlayerPrefs.SetFloat("SavedSFX", val);
-                    if (sfxSource != null) sfxSource.volume = val; // Hanya mengubah volume SFX real-time
+                    if (sfxSource != null) sfxSource.volume = val; 
                     PlayerPrefs.Save();
                 });
             }
         }
 
-        // Sinkronisasi Dropdown FPS
         if (dropdown != null)
         {
             dropdown.value = PlayerPrefs.GetInt("SavedFPS", 1);
@@ -196,7 +186,6 @@ public class ProloguePanelManager : MonoBehaviour
 
     private void ApplySavedFPS(int index)
     {
-        // Menyelaraskan dengan target FPS yang ada di MainMenuManager kamu euy!
         switch (index)
         {
             case 0: Application.targetFrameRate = 60; break;
@@ -226,7 +215,6 @@ public class ProloguePanelManager : MonoBehaviour
     {
         yield return new WaitForSeconds(0.5f);
 
-        // Memainkan SFX judul di awal menggunakan PlayOneShot aman karena posisinya di intro awal scene
         if (sfxSource != null && prologueTitleSFX != null)
         {
             sfxSource.PlayOneShot(prologueTitleSFX);
@@ -237,7 +225,6 @@ public class ProloguePanelManager : MonoBehaviour
             fireAmbientSource.Play();
         }
 
-        // FADE IN: Judul Prologue muncul
         if (prologueTitleText != null)
         {
             float alpha = 0f;
@@ -252,7 +239,6 @@ public class ProloguePanelManager : MonoBehaviour
 
         yield return new WaitForSeconds(textDisplayDuration);
 
-        // FADE OUT: Judul Prologue menghilang
         if (prologueTitleText != null)
         {
             float alpha = 1f;
@@ -265,17 +251,14 @@ public class ProloguePanelManager : MonoBehaviour
             prologueTitleText.color = new Color(prologueTitleText.color.r, prologueTitleText.color.g, prologueTitleText.color.b, 0f);
         }
 
-        // === SEKUENS INTRO SELESAI (MASUK SLIDE 1) ===
         if (prologueSlides.Count > 0 && prologueSlides[0].panelObject != null)
         {
             prologueSlides[0].panelObject.SetActive(true);
             PrepareTypewriterForCurrentPanel();
         }
 
-        // Jalankan SFX Slide Pertama
         PlayCurrentSlideSFX();
 
-        // FADE IN LAYAR: Mengubah layar fader dari hitam pekat ke transparan
         if (screenFader != null)
         {
             screenFader.blocksRaycasts = true; 
@@ -327,7 +310,6 @@ public class ProloguePanelManager : MonoBehaviour
         {
             if (nextButton != null) nextButton.interactable = false; 
             
-            // === FIX UTAMA: Hentikan SFX panel saat ini begitu tombol Next ditekan ===
             if (sfxSource != null)
             {
                 sfxSource.Stop();
@@ -339,7 +321,6 @@ public class ProloguePanelManager : MonoBehaviour
 
     IEnumerator FadeBetweenPanels()
     {
-        // 1. FADE OUT: Layar menggelap ke hitam pekat
         if (screenFader != null)
         {
             screenFader.blocksRaycasts = true;
@@ -354,7 +335,6 @@ public class ProloguePanelManager : MonoBehaviour
             screenFader.alpha = 1f;
         }
 
-        // === PROSES DI BALIK LAYAR HITAM PEKAT ===
         if (currentSlideIndex < prologueSlides.Count)
         {
             if (prologueSlides[currentSlideIndex].panelObject != null)
@@ -371,13 +351,11 @@ public class ProloguePanelManager : MonoBehaviour
                     prologueSlides[currentSlideIndex].panelObject.SetActive(true);
                 }
                 
-                // Mainkan SFX panel baru (menggunakan sistem override .clip, bukan PlayOneShot)
                 PlayCurrentSlideSFX();
                 PrepareTypewriterForCurrentPanel(); 
 
                 yield return new WaitForSeconds(0.2f);
 
-                // 2. FADE IN: Layar membuka kembali perlahan
                 if (screenFader != null)
                 {
                     float alpha = 1f;
@@ -440,7 +418,6 @@ public class ProloguePanelManager : MonoBehaviour
         {
             AudioClip currentSFX = prologueSlides[currentSlideIndex].sfxClip;
             
-            // === FIX UTAMA: Ubah sistem menjadi AudioSource.clip agar bisa di-Stop() sewaktu-waktu ===
             if (currentSFX != null)
             {
                 sfxSource.clip = currentSFX;
